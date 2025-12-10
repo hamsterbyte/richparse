@@ -5,7 +5,7 @@ edition = "2024"
 description = "A Rust library for parsing rich text markup into ANSI escape sequences for terminal output."
 license = "MIT"
 repository = "https://github.com/hamsterbyte/richlib"
-keywords = ["ansi", "terminal", "rich-text", "color", "markup", "cli"]
+keywords = ["ansi", "terminal", "rich-text", "color",  "cli"]
 categories = ["command-line-interface", "text-processing"]
 
 [dependencies]

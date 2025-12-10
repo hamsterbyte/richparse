@@ -1,0 +1,18 @@
+[package]
+name = "richlib"
+version = "0.1.0"
+edition = "2024"
+description = "A Rust library for parsing rich text markup into ANSI escape sequences for terminal output."
+license = "MIT"
+keywords = ["ansi", "terminal", "rich-text", "color", "markup", "cli"]
+categories = ["command-line-interface", "text-processing"]
+
+[dependencies]
+fluent-bundle = { version = "0.16", optional = true }
+
+[dev-dependencies]
+fluent-bundle = "0.16"
+unic-langid = { version = "0.9", features = ["macros"] }
+
+[features]
+intl = ["dep:fluent-bundle"]

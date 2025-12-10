@@ -1,3 +1,19 @@
+//! # richparse
+//!
+//! `richparse` is a library for parsing rich text markup (e.g., `<red>Hello</red>`) into
+//! ANSI escape sequences for terminal output.
+//!
+//! It is designed to be zero-copy, meaning `RichString`, `Span`, and `Style` borrow
+//! the input text whenever possible to avoid allocations.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use richparse::rich;
+//!
+//! println!("{}", rich!("<green><bold>Success!</bold></green>"));
+//! ```
+
 pub mod style;
 pub mod span;
 pub mod parser;
@@ -27,6 +43,4 @@ mod tests {
         let expected = "\x1b[31m\x1b[49m\x1b[1mHello\x1b[0m";
         assert_eq!(rich_string.to_string(), expected);
     }
-
-
 }

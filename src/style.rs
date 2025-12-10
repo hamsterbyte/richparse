@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     Black,
@@ -102,7 +104,7 @@ impl Color {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Style {
+pub struct Style<'a> {
     pub fg: Color,
     pub bg: Color,
     pub bold: bool,
@@ -116,11 +118,11 @@ pub struct Style {
     pub blink: bool,
     pub inverse: bool,
     pub hidden: bool,
-    pub url: Option<String>,
+    pub url: Option<Cow<'a, str>>,
     pub underline_color: Option<Color>,
 }
 
-impl Default for Style {
+impl<'a> Default for Style<'a> {
     fn default() -> Self {
         Self {
             fg: Color::Default,
@@ -142,7 +144,7 @@ impl Default for Style {
     }
 }
 
-impl Style {
+impl<'a> Style<'a> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -217,9 +219,28 @@ impl Style {
         self
     }
 
-    pub fn url(mut self, url: String) -> Self {
-        self.url = Some(url);
+    pub fn url<S: Into<Cow<'a, str>>>(mut self, url: S) -> Self {
+        self.url = Some(url.into());
         self
     }
 
+    pub fn into_owned(self) -> Style<'static> {
+        Style {
+            fg: self.fg,
+            bg: self.bg,
+            bold: self.bold,
+            italic: self.italic,
+            underline: self.underline,
+            double_underline: self.double_underline,
+            curly_underline: self.curly_underline,
+            overline: self.overline,
+            strikethrough: self.strikethrough,
+            dim: self.dim,
+            blink: self.blink,
+            inverse: self.inverse,
+            hidden: self.hidden,
+            url: self.url.map(|u| Cow::Owned(u.into_owned())),
+            underline_color: self.underline_color,
+        }
+    }
 }

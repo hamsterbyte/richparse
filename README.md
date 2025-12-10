@@ -31,7 +31,7 @@ For background colors, use `<bg_color_name>` or `<bg=...>` tags.
 
 ### Text Modifiers
 
-| Modifier | Tag | Alias |
+| Modifier | Tag | Alias | 
 | :--- | :--- | :--- |
 | **Bold** | `<bold>` | `<b>` |
 | **Italic** | `<italic>` | `<i>` |
@@ -39,12 +39,12 @@ For background colors, use `<bg_color_name>` or `<bg=...>` tags.
 | **Double Underline** | `<dunderline>` | `<uu>` |
 | **Curly Underline** | `<cunderline>` | `<cu>` |
 | **Strikethrough** | `<strikethrough>` | `<s>` |
-| **Dim** | `<dim>` | |
-| **Blink** | `<blink>` | |
-| **Inverse** | `<inverse>` | |
-| **Hidden** | `<hidden>` | |
-| **Clear** | `<clear>` | |
-| **Hyperlink** | `<link=url>` | |
+| **Dim** | `<dim>` | | 
+| **Blink** | `<blink>` | | 
+| **Inverse** | `<inverse>` | | 
+| **Hidden** | `<hidden>` | | 
+| **Clear** | `<clear>` | | 
+| **Hyperlink** | `<link=url>` | | 
 | **Overline** | `<overline>` | `<o>` |
 
 *   `hidden`
@@ -165,6 +165,20 @@ fn main() {
 ```
 
 For more examples, refer to the `examples/test.rs` file in the repository.
+
+## Zero-Copy & Lifetimes
+
+`richparse` is designed to be zero-copy where possible. The `RichString`, `Span`, and `Style` structs carry a lifetime parameter `'a` and borrow text from the input string. This ensures high performance but means you cannot return a `RichString` created from a temporary string (unless you use static strings or manage the lifetime yourself).
+
+If you need to keep the `RichString` longer than the input string, you can use `.into_owned()` to convert it to `RichString<'static>`:
+
+```rust
+let rich = {
+    let input = String::from("<red>Temporary</red>");
+    richparse::RichString::parse(&input).into_owned()
+};
+// `rich` is now independent of `input`.
+```
 
 ## License
 

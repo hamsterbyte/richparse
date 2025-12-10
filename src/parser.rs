@@ -1,122 +1,116 @@
 use crate::span::Span;
 use crate::style::{Color, Style};
 use std::fmt;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RichString {
-    pub spans: Vec<Span>,
+pub struct RichString<'a> {
+    pub spans: Vec<Span<'a>>,
 }
 
-impl RichString {
-    pub fn new(spans: Vec<Span>) -> Self {
+impl<'a> RichString<'a> {
+    pub fn new(spans: Vec<Span<'a>>) -> Self {
         Self { spans }
     }
 
-    pub fn parse(input: &str) -> Self {
+    pub fn into_owned(self) -> RichString<'static> {
+        RichString {
+            spans: self.spans.into_iter().map(|s| s.into_owned()).collect(),
+        }
+    }
+
+    pub fn parse(input: &'a str) -> Self {
         let mut spans = Vec::new();
         let mut style_stack = vec![Style::default()];
-        let mut current_text = String::new();
         
-        let mut chars = input.chars().peekable();
+        let mut cursor = 0;
+        while let Some(rel_pos) = input[cursor..].find('<') {
+            let pos = cursor + rel_pos;
+            
+            // Text before the tag
+            if pos > cursor {
+                let text = &input[cursor..pos];
+                let current_style = style_stack.last().cloned().unwrap_or_default();
+                spans.push(Span::new(text, current_style));
+            }
 
-        while let Some(c) = chars.next() {
-            if c == '<' {
-                // Check if escaped (e.g. "<<" -> "<")
-                if let Some(&'<') = chars.peek() {
-                    chars.next(); // consume the second '<'
-                    current_text.push('<');
-                    continue;
-                }
+            // Check what follows '<'
+            let remainder = &input[pos + 1..];
+            if remainder.starts_with('<') {
+                // Escaped "<<" -> "<"
+                let current_style = style_stack.last().cloned().unwrap_or_default();
+                spans.push(Span::new("<", current_style));
+                cursor = pos + 2;
+                continue;
+            }
 
-                // Potential tag start
-                let mut tag_content = String::new();
-                let mut is_closing = false;
-                
-                // Peek to see if it's a closing tag
-                if let Some(&'/') = chars.peek() {
-                    is_closing = true;
-                    chars.next(); // consume '/'
-                }
+            // Look for closing '>'
+            if let Some(tag_end_rel) = remainder.find('>') {
+                let tag_content = &remainder[..tag_end_rel];
+                let tag_end_abs = pos + 1 + tag_end_rel + 1; // +1 for '<', +1 for '>'
 
-                // Read until '>'
-                let mut valid_tag = false;
-                while let Some(&next_c) = chars.peek() {
-                    if next_c == '>' {
-                        chars.next(); // consume '>'
-                        valid_tag = true;
-                        break;
-                    }
-                    tag_content.push(chars.next().unwrap());
-                }
-
-                if valid_tag {
-                    // Flush current text if any
-                    if !current_text.is_empty() {
-                        // Current style is the top of the stack
-                        let current_style = style_stack.last().cloned().unwrap_or_default();
-                        spans.push(Span::new(&current_text, current_style));
-                        current_text.clear();
-                    }
-
-                    if is_closing {
-                        // Pop style if stack has more than base style
-                        if style_stack.len() > 1 {
-                            style_stack.pop();
-                        }
-                    } else {
-                        // Push new style based on current + tag
-                        let current_style = style_stack.last().cloned().unwrap_or_default();
-                        let new_style = apply_tag(&tag_content, current_style);
-                        style_stack.push(new_style);
+                if tag_content.starts_with('/') {
+                    // Closing tag e.g. "</red>"
+                    if style_stack.len() > 1 {
+                        style_stack.pop();
                     }
                 } else {
-                    current_text.push('<');
-                    if is_closing { current_text.push('/'); }
-                    current_text.push_str(&tag_content);
+                    // Opening tag e.g. "<red>" or "<color=red>"
+                    let current_style = style_stack.last().cloned().unwrap_or_default();
+                    let new_style = apply_tag(tag_content, current_style);
+                    style_stack.push(new_style);
                 }
+                cursor = tag_end_abs;
             } else {
-                current_text.push(c);
+                // No closing '>', treat '<' as literal text
+                let current_style = style_stack.last().cloned().unwrap_or_default();
+                spans.push(Span::new("<", current_style));
+                cursor = pos + 1;
             }
         }
 
-        // Flush remaining text
-        if !current_text.is_empty() {
+        // Remaining text
+        if cursor < input.len() {
+            let text = &input[cursor..];
             let current_style = style_stack.last().cloned().unwrap_or_default();
-            spans.push(Span::new(&current_text, current_style));
+            spans.push(Span::new(text, current_style));
         }
 
         Self { spans }
     }
 }
 
-fn apply_tag(tag: &str, mut style: Style) -> Style {
+fn apply_tag<'a>(tag: &'a str, mut style: Style<'a>) -> Style<'a> {
     let parts: Vec<&str> = tag.split('=').collect();
     let key = parts[0].trim().to_lowercase();
-    let value = if parts.len() > 1 { Some(parts[1].trim().to_lowercase()) } else { None };
+    let val_raw = if parts.len() > 1 { Some(parts[1].trim()) } else { None };
+    let val_lower = val_raw.map(|v| v.to_lowercase());
 
-    match (key.as_str(), value) {
+    match (key.as_str(), val_lower.as_deref()) {
         // Explicit color=...
         ("color" | "fg", Some(val)) => {
-            if let Some(c) = parse_color(&val) {
+            if let Some(c) = parse_color(val) {
                 style.fg = c;
             }
         }
         // Explicit bg=...
         ("background" | "bg", Some(val)) => {
-            if let Some(c) = parse_color(&val) {
+            if let Some(c) = parse_color(val) {
                 style.bg = c;
             }
         }
         
         // Explicit link=...
-        ("link", Some(val)) => {
-            style.url = Some(val.to_string());
+        ("link", _) => {
+            if let Some(raw) = val_raw {
+                style.url = Some(Cow::Borrowed(raw));
+            }
         }
 
         // Explicit curly underline with color
         ("cu" | "cunderline", Some(val)) => {
             style.curly_underline = true;
-            if let Some(c) = parse_color(&val) {
+            if let Some(c) = parse_color(val) {
                 style.underline_color = Some(c);
             }
         }
@@ -124,7 +118,7 @@ fn apply_tag(tag: &str, mut style: Style) -> Style {
         // Explicit underline with color
         ("u" | "underline", Some(val)) => {
             style.underline = true;
-            if let Some(c) = parse_color(&val) {
+            if let Some(c) = parse_color(val) {
                 style.underline_color = Some(c);
             }
         }
@@ -132,7 +126,7 @@ fn apply_tag(tag: &str, mut style: Style) -> Style {
         // Explicit double underline with color
         ("uu" | "dunderline", Some(val)) => {
             style.double_underline = true;
-            if let Some(c) = parse_color(&val) {
+            if let Some(c) = parse_color(val) {
                 style.underline_color = Some(c);
             }
         }
@@ -218,7 +212,7 @@ fn parse_color(name: &str) -> Option<Color> {
     }
 }
 
-impl fmt::Display for RichString {
+impl<'a> fmt::Display for RichString<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for span in &self.spans {
             write!(f, "{}", span)?;
@@ -228,8 +222,8 @@ impl fmt::Display for RichString {
 }
 
 #[cfg(feature = "intl")]
-impl<'source> From<RichString> for fluent_bundle::FluentValue<'source> {
-    fn from(rs: RichString) -> Self {
+impl<'a, 'source> From<RichString<'a>> for fluent_bundle::FluentValue<'source> {
+    fn from(rs: RichString<'a>) -> Self {
         fluent_bundle::FluentValue::String(std::borrow::Cow::Owned(rs.to_string()))
     }
 }
@@ -247,7 +241,7 @@ mod tests {
         assert_eq!(rs.spans[0].style.fg, Color::Red);
         
         assert_eq!(rs.spans[1].text, "Clear");
-        assert_eq!(rs.spans[1].style, Style::default()); // Should be completely default
+        assert_eq!(rs.spans[1].style, Style::default());
         
         assert_eq!(rs.spans[2].text, " Red");
         assert_eq!(rs.spans[2].style.fg, Color::Red);
@@ -256,9 +250,10 @@ mod tests {
     #[test]
     fn test_parse_escaped_tag() {
         let rs = RichString::parse("Escaped <<red>Tag");
-        assert_eq!(rs.spans.len(), 1);
-        assert_eq!(rs.spans[0].text, "Escaped <red>Tag");
-        assert_eq!(rs.spans[0].style, Style::default());
+        assert_eq!(rs.spans.len(), 3);
+        assert_eq!(rs.spans[0].text, "Escaped ");
+        assert_eq!(rs.spans[1].text, "<");
+        assert_eq!(rs.spans[2].text, "red>Tag");
     }
 
     #[test]
@@ -275,7 +270,7 @@ mod tests {
         let rs = RichString::parse("<link=https://example.com>Click Me</link>");
         assert_eq!(rs.spans.len(), 1);
         assert_eq!(rs.spans[0].text, "Click Me");
-        assert_eq!(rs.spans[0].style.url, Some("https://example.com".to_string()));
+        assert_eq!(rs.spans[0].style.url.as_deref(), Some("https://example.com"));
     }
 
     #[test]
@@ -320,7 +315,7 @@ mod tests {
     #[test]
     fn test_parse_kv_tags() {
         let rs = RichString::parse("KV: <color=red>Red</color> <bg=blue>BgBlue</bg>");
-        assert_eq!(rs.spans.len(), 4); // "KV: ", "Red", " ", "BgBlue"
+        assert_eq!(rs.spans.len(), 4); 
         
         assert_eq!(rs.spans[1].text, "Red");
         assert_eq!(rs.spans[1].style.fg, Color::Red);
@@ -356,9 +351,20 @@ mod tests {
         assert_eq!(rs.spans[0].style.fg, Color::Red);
         
         assert_eq!(rs.spans[1].text, "B");
-        assert_eq!(rs.spans[1].style.fg, Color::Blue); // Overrides red? Yes, logic replaces FG.
+        assert_eq!(rs.spans[1].style.fg, Color::Blue);
         
         assert_eq!(rs.spans[2].text, " R");
         assert_eq!(rs.spans[2].style.fg, Color::Red);
+    }
+
+    #[test]
+    fn test_into_owned() {
+        let rs_owned = {
+            let input = String::from("<red>Owned</red>");
+            RichString::parse(&input).into_owned()
+        };
+        // input dropped here. rs_owned should survive.
+        assert_eq!(rs_owned.spans.len(), 1);
+        assert_eq!(rs_owned.spans[0].text, "Owned");
     }
 }

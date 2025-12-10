@@ -2,6 +2,7 @@ use richparse::{RichString, Color, Style, rich};
 
 fn main() {  
     single_tests();
+    into_owned_test();
     multiple_test();
     custom_span_test();
     
@@ -103,10 +104,28 @@ fn single_tests() {
     t.push("This tag is escaped: <<red>Red<<red>");
     t.push("This tag is not: <red>Red</red>");
 
+    let message = "<red>This should be red, but may fail due to zero copy</red>";
+    t.push(message);
+
     for line in t.iter(){
         println!("{}", rich!(line));
     }
 
+}
+
+
+fn into_owned_test() {
+    println!("\n--- Into Owned Test ---");
+    let owned_rich_string = {
+        let temporary_input = String::from("<blue>This is a temporary string</blue>");
+        // parse returns a RichString that borrows from temporary_input
+        RichString::parse(&temporary_input).into_owned()
+    };
+    // temporary_input is dropped here, but owned_rich_string still holds its data
+    println!("{}", owned_rich_string);
+
+    let static_owned_rich_string = rich!("<green>This is a static string</green>").into_owned();
+    println!("{}", static_owned_rich_string);
 }
 
 fn multiple_test() {

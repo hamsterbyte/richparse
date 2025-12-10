@@ -1,22 +1,30 @@
 use std::fmt;
+use std::borrow::Cow;
 use crate::style::Style;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Span {
-    pub text: String,
-    pub style: Style,
+pub struct Span<'a> {
+    pub text: Cow<'a, str>,
+    pub style: Style<'a>,
 }
 
-impl Span {
-    pub fn new(text: &str, style: Style) -> Self {
+impl<'a> Span<'a> {
+    pub fn new<S: Into<Cow<'a, str>>>(text: S, style: Style<'a>) -> Self {
         Self {
-            text: text.to_string(),
+            text: text.into(),
             style,
+        }
+    }
+
+    pub fn into_owned(self) -> Span<'static> {
+        Span {
+            text: Cow::Owned(self.text.into_owned()),
+            style: self.style.into_owned(),
         }
     }
 }
 
-impl fmt::Display for Span {
+impl<'a> fmt::Display for Span<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let style = &self.style;
         

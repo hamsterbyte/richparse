@@ -1,10 +1,10 @@
-# richlib
+# richparse
 
 A Rust library for parsing rich text markup into ANSI escape sequences for terminal output.
 
-`richlib` allows you to define styled text using a simple HTML-like tag syntax within your strings, and it automatically converts these into the appropriate ANSI escape codes for display in modern terminal emulators. This enables easy creation of colorful and formatted command-line interfaces.
+`richparse` allows you to define styled text using a simple HTML-like tag syntax within your strings, and it automatically converts these into the appropriate ANSI escape codes for display in modern terminal emulators. This enables easy creation of colorful and formatted command-line interfaces.
 
-## Supported Tags
+## Features
 
 ### Colors (Foreground & Background)
 
@@ -67,26 +67,26 @@ You can set the color of the underline decoration (if supported by your terminal
 
 ## Installation
 
-Add `richlib` to your `Cargo.toml` dependencies:
+Add `richparse` to your `Cargo.toml` dependencies:
 
 ```toml
 [dependencies]
-richlib = "0.1" # Or the latest version available on crates.io
+richparse = "0.1" # Or the latest version available on crates.io
 ```
 
 To enable Fluent (i18n) integration:
 
 ```toml
 [dependencies]
-richlib = { version = "0.1", features = ["intl"] }
+richparse = { version = "0.1", features = ["intl"] }
 ```
 
 ## Usage
 
-Here's a quick example of how to use `richlib`:
+Here's a quick example of how to use `richparse`:
 
 ```rust
-use richlib::{rich, Color, Style};
+use richparse::{rich, Color, Style};
 
 fn main() {
     // Basic colored text
@@ -112,8 +112,8 @@ fn main() {
 
     // You can also build RichString programmatically
     let custom_style = Style::new().fg(Color::BrightMagenta).underline().double_underline();
-    let programmatic_text = richlib::RichString::new(vec![
-        richlib::Span::new("Programmatic Text", custom_style)
+    let programmatic_text = richparse::RichString::new(vec![
+        richparse::Span::new("Programmatic Text", custom_style)
     ]);
     println!("{}", programmatic_text);
 }
@@ -126,7 +126,7 @@ If you enabled the `intl` feature, you can pass `RichString` directly to Fluent 
 ```toml
 # Cargo.toml
 [dependencies]
-richlib = { version = "0.1", features = ["intl"] }
+richparse = { version = "0.1", features = ["intl"] }
 ```
 
 ```rust
@@ -134,7 +134,7 @@ richlib = { version = "0.1", features = ["intl"] }
 #[cfg(feature = "intl")]
 fn main() {
     use fluent_bundle::{FluentBundle, FluentResource, FluentArgs};
-    use richlib::{rich, RichString};
+    use richparse::{rich, RichString};
     use unic_langid::langid;
 
     let ftl_string = "welcome-message = Welcome, {$userName}! Enjoy the {\"<red><bold>\"}Rich{\"</bold></red>\"} experience.";

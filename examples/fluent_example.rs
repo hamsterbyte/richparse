@@ -1,7 +1,7 @@
 #[cfg(feature = "intl")]
 fn main() {
     use fluent_bundle::{FluentBundle, FluentResource, FluentArgs};
-    use richlib::{rich};
+    use richparse::{RichString, rich};
     use unic_langid::langid;
 
     // 1. Define a simple Fluent resource (usually loaded from a file)

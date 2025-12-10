@@ -1,8 +1,8 @@
-use richlib::{RichString, Color, Style, rich};
+use richparse::{RichString, Color, Style, rich};
 
 fn main() {  
     single_tests();
-    nesting_test();
+    multiple_test();
     custom_span_test();
     
 }
@@ -33,7 +33,7 @@ fn single_tests() {
     t.push("<bg_cyan>BG Cyan</bg_cyan>");
     t.push("<bg_white>BG White</bg_white>");
 
-    // Bright Colors
+    // Bright Colors (space-separated)
     t.push("\nBright Colors (space-separated):");
     t.push("<color=bright black>Bright Black</color>");
     t.push("<color=bright red>Bright Red</color>");
@@ -109,7 +109,7 @@ fn single_tests() {
 
 }
 
-fn nesting_test() {
+fn multiple_test() {
     let example_text = 
         "<red>Hello</red> <blue><bold>World!</bold></blue> This is <green>green and <italic>italic</italic></green> text.
         And this is <bg_yellow><black>black text on yellow background</black></bg_yellow>.
@@ -124,20 +124,20 @@ fn nesting_test() {
 fn custom_span_test() {
     // You can also construct RichString manually and print it
     let mut custom_spans = Vec::new();
-    custom_spans.push(richlib::Span::new(
+    custom_spans.push(richparse::Span::new(
         "Custom ",
         Style::new().fg(Color::Cyan),
     ));
-    custom_spans.push(richlib::Span::new(
+    custom_spans.push(richparse::Span::new(
         "Styled ",
         Style::new().fg(Color::Magenta).italic(),
     ));
-    custom_spans.push(richlib::Span::new(
+    custom_spans.push(richparse::Span::new(
         "Text",
         Style::new().fg(Color::Yellow).underline(),
     ));
 
-    custom_spans.push(richlib::Span::new(
+    custom_spans.push(richparse::Span::new(
         " With Background",
         Style::new().bg(Color::Yellow).fg(Color::Black)
     ));

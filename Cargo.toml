@@ -1,10 +1,10 @@
 [package]
-name = "richlib"
+name = "richparse"
 version = "0.1.0"
 edition = "2024"
 description = "A Rust library for parsing rich text markup into ANSI escape sequences for terminal output."
 license = "MIT"
-repository = "https://github.com/hamsterbyte/richlib"
+repository = "https://github.com/hamsterbyte/richparse"
 keywords = ["ansi", "terminal", "rich-text", "color",  "cli"]
 categories = ["command-line-interface", "text-processing"]
 

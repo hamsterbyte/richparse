@@ -1,7 +1,7 @@
 #[cfg(feature = "intl")]
 #[test]
 fn test_rich_string_to_fluent_value() {
-    use richlib::RichString;
+    use richparse::RichString;
     use fluent_bundle::FluentValue;
     use std::borrow::Cow;
 
